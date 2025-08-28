@@ -98,44 +98,24 @@ def warp_image_and_yolo_boxes(img, label_lines, src_quad_px, dst_size, classes_t
 
     return warped_img, new_lines
 
-# --- example usage ---
-#if __name__ == "__main__":
-#    img_path = "path/to/img.jpg"
-#    txt_path = "path/to/img.txt"
-#    out_img = "path/to/out_img.jpg"
-#    out_txt = "path/to/out_img.txt"
-#
-#    img = cv2.imread(img_path)
-#    with open(txt_path, "r") as f:
-#        labels = [l.strip() for l in f if l.strip()]
-#
-#    # Replace with your detected inner polygon (pixels), ordered TL, TR, BR, BL
-#    src_quad_px = np.array([[120, 80], [1180, 90], [1165, 980], [105, 970]], dtype=np.float32)
-#
-#    warped, new_labels = warp_image_and_yolo_boxes(img, labels, src_quad_px, (800, 800), classes_to_keep=None)
-#
-#    cv2.imwrite(out_img, warped)
-#    with open(out_txt, "w") as f:
-#        for l in new_labels:
-#            f.write(l + "\n")
-#
-#    print("Saved", out_img, "and", out_txt)
-
-#################### new code
-
 if __name__ == "__main__":
-    # Tüm dosyaları işle
-    split = "val/"
-    input_dir = "../datasets/tatamovski/"
-    image_dir = input_dir + split + "images"
-    label_dir = input_dir + split + "labels"
-    output_dir = "warpeddata/" + split
-    print(output_dir)
-    for label_path in glob.glob(os.path.join(label_dir, "*.txt")):
-        base = os.path.splitext(os.path.basename(label_path))[0]
-        image_path = os.path.join(image_dir, base + ".jpg")
+    #input_dir, already_warped = "../../tatamovski/", False
+    input_dir, already_warped = "../../warpedhata_detection/", True
+    output_root_dir = "warpeddata/"
+    dest_size = (800, 800)
 
-        if os.path.exists(image_path):
+    for split in ["train/", "valid/"]:
+        image_dir = input_dir + split + "images"
+        label_dir = input_dir + split + "labels"
+        output_dir = output_root_dir + split
+        for label_path in glob.glob(os.path.join(label_dir, "*.txt")):
+            base = os.path.splitext(os.path.basename(label_path))[0]
+            image_path = os.path.join(image_dir, base + ".jpg")
+
+            if not os.path.exists(image_path):
+                print(f'Error! Image file not found that correspond to the label file: {label_path}')
+                continue
+
             img = cv2.imread(image_path)
             with open(label_path, "r") as f:
                 labels = [l.strip() for l in f if l.strip()]
@@ -144,12 +124,16 @@ if __name__ == "__main__":
             plank_quad = None
             bbox_lines = []
             for line in labels:
-                if line[0] == "2":
+                if (not already_warped) and line[0] == "2":
                     _, plank_poly = parse_polygon_line(line, img_w, img_h)
                     plank_quad = force_quad(plank_poly)
                 else:
                     bbox_lines.append("0" + line[1:])
-            warped_img, new_labels = warp_image_and_yolo_boxes(img, bbox_lines, plank_quad, (800, 800), classes_to_keep=None)
+
+            if already_warped:
+                src_h, src_w = img.shape[:2]
+                plank_quad = np.array([[0, 0], [src_w-1, 0], [src_w-1, src_h-1], [0, src_h-1]], dtype=np.float32)
+            warped_img, new_labels = warp_image_and_yolo_boxes(img, bbox_lines, plank_quad, dest_size, classes_to_keep=None)
 
             # Sonuçları kaydet
             output_img_dir = os.path.join(output_dir, 'images')

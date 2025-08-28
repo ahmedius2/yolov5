@@ -501,7 +501,8 @@ def train(hyp, opt, device, callbacks):
                 del ckpt
                 callbacks.run("on_model_save", last, epoch, final_epoch, best_fitness, fi)
 
-        plot_results(save_dir / 'results.csv')
+        if epoch % 5 == 0:
+            plot_results(save_dir / 'results.csv')
 
         # EarlyStopping
         if RANK != -1:  # if DDP training
