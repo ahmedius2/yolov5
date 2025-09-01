@@ -99,10 +99,10 @@ def warp_image_and_yolo_boxes(img, label_lines, src_quad_px, dst_size, classes_t
     return warped_img, new_lines
 
 if __name__ == "__main__":
-    #input_dir, already_warped = "../../tatamovski/", False
-    input_dir, already_warped = "../../warpedhata_detection/", True
+    input_dir, already_warped = "../../tatamovski/", False
+    #input_dir, already_warped = "../../warpedhata_detection/", True
     output_root_dir = "warpeddata/"
-    dest_size = (800, 800)
+    dest_size = (640, 640)
 
     for split in ["train/", "valid/"]:
         image_dir = input_dir + split + "images"
