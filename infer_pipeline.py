@@ -14,6 +14,10 @@ from utils.general import (
 )
 from utils.segment.general import process_mask, process_mask_native
 from utils.torch_utils import select_device
+import utils.anom_visualizer as avis
+
+# when hosting on windows and serving for wsl linux, use gateway ip
+SERVER_IP = "127.0.0.1"
 
 # --------------------------
 # Helpers
@@ -289,9 +293,10 @@ def run_seg_warp_detect_pipeline(
     detect_model.model.warmup(imgsz=(1, 3, *imgsz_det_checked))
 
     results, imgcnt = [], 0
+    global SERVER_IP
     while True:
         if get_imgs_from_cam:
-            SERVER_URL = "http://192.168.64.1:8554/frame"  # adjust host if connecting from WSL/container
+            SERVER_URL = f"http://{SERVER_IP}:8554/frame"  # adjust host if connecting from WSL/container
             resp = requests.get(SERVER_URL, stream=True)
             if resp.status_code == 200:
                 jpg_bytes = resp.content
@@ -335,14 +340,8 @@ def run_seg_warp_detect_pipeline(
         # map boxes back
         mapped_boxes = warper.unwarp_boxes(det_boxes_on_warp, M_inv)
 
-        # draw on original
-        im0_draw = im0.copy()
-        annotator = Annotator(im0_draw, line_width=2, example=str(detect_model.names))
-        for (x_min, y_min, x_max, y_max), conf, cls in mapped_boxes:
-            # ensure ints for drawing
-            xy = [int(round(x_min)), int(round(y_min)), int(round(x_max)), int(round(y_max))]
-            label = f"{detect_model.names[cls]} {conf:.2f}" if hasattr(detect_model, "names") else f"{cls} {conf:.2f}"
-            annotator.box_label(xy, label, color=colors(cls, True))
+        im0_draw = avis.create_visualization(im0, mask, warped,
+                                  det_boxes_on_warp, mapped_boxes, str(detect_model.names))
 
         if get_imgs_from_cam:
             cv2.imshow("Frame from server", im0_draw)
